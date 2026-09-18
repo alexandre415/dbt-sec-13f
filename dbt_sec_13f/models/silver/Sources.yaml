@@ -1,0 +1,29 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: raw_db
+    schema: raw
+    description: "Bronze layer — raw data loaded directly from SEC Form 13F TSV files via Snowflake COPY INTO. No transformations applied."
+    tables:
+      - name: raw_13f_infotable
+        description: "One row per fund-security-quarter position. Loaded from INFOTABLE.tsv files."
+        columns:
+          - name: accession_number
+            description: "SEC accession number — unique identifier for a 13F filing."
+          - name: cusip
+            description: "CUSIP identifier for the security held."
+          - name: value
+            description: "Market value in thousands of USD."
+          - name: sshprnamt
+            description: "Number of shares or principal amount."
+
+      - name: raw_13f_coverpage
+        description: "One row per filer per quarter. Loaded from COVERPAGE.tsv files. Identifies who filed."
+        columns:
+          - name: accession_number
+            description: "SEC accession number — joins to raw_13f_infotable."
+          - name: filingmanager_name
+            description: "Name of the investment manager/fund that filed."
+          - name: reportcalendarorquarter
+            description: "Quarter end date in DD-MON-YYYY format (e.g. 30-SEP-2025)."

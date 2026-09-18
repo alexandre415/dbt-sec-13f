@@ -1,0 +1,69 @@
+version: 2
+
+models:
+  - name: stg_13f_positions
+    description: "Silver layer — typed and cleaned position data from SEC Form 13F INFOTABLE. One row per fund-security-quarter position."
+    columns:
+      - name: accession_number
+        description: "SEC accession number — links position to the filer (fund) in stg_13f_filers."
+        tests:
+          - not_null
+      - name: position_sk
+        description: "Surrogate key for the position row."
+        tests:
+          - not_null
+          - unique
+      - name: cusip
+        description: "CUSIP identifier for the security."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_value_lengths_to_equal:
+              value: 9
+      - name: market_value_thousands
+        description: "Market value of the position in thousands of USD."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 400000000000
+      - name: shares_or_principal_amount
+        description: "Number of shares or principal amount."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 400000000000
+      - name: amount_type
+        description: "SH = shares, PRN = principal amount."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['SH', 'PRN']
+      - name: filing_period
+        description: "Filing period derived from the source file path."
+        tests:
+          - not_null
+
+  - name: stg_13f_filers
+    description: "Silver layer — typed and cleaned filer identity from SEC Form 13F COVERPAGE. One row per fund per quarter."
+    columns:
+      - name: accession_number
+        description: "SEC accession number — primary key for this table."
+        tests:
+          - not_null
+          - unique
+      - name: fund_name
+        description: "Name of the investment manager that filed."
+        tests:
+          - not_null
+      - name: report_date
+        description: "Quarter end date."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: "'2000-01-01'::date"
+              max_value: "'2030-12-31'::date"
+      - name: filing_period
+        description: "Filing period derived from the source file path."
+        tests:
+          - not_null

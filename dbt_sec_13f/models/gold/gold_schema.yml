@@ -1,0 +1,107 @@
+version: 2
+
+models:
+  - name: dim_fund
+    description: "Gold dimension — one row per unique investment fund. Deduplicates across quarters."
+    columns:
+      - name: fund_sk
+        description: "Surrogate key (MD5 of fund_name)."
+        tests:
+          - not_null
+          - unique
+      - name: fund_name
+        description: "Name of the investment fund."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_value_lengths_to_be_between:
+              min_value: 2
+              max_value: 200
+
+  - name: dim_security
+    description: "Gold dimension — one row per unique security (CUSIP)."
+    columns:
+      - name: security_sk
+        description: "Surrogate key (CUSIP)."
+        tests:
+          - not_null
+          - unique
+      - name: cusip
+        description: "CUSIP identifier."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_value_lengths_to_equal:
+              value: 9
+      - name: issuer_name
+        description: "Name of the security issuer."
+        tests:
+          - not_null
+
+  - name: dim_date
+    description: "Gold dimension — one row per reporting quarter in the dataset."
+    columns:
+      - name: date_sk
+        description: "Surrogate key (report_date)."
+        tests:
+          - not_null
+          - unique
+      - name: report_year
+        description: "Year of the reporting quarter."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 2000
+              max_value: 2030
+      - name: report_quarter
+        description: "Quarter number (1-4)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4]
+
+  - name: fato_positions
+    description: "Gold fact table — one row per fund-security-quarter position. Core of the star schema."
+    columns:
+      - name: position_fact_sk
+        description: "Surrogate key for the fact row."
+        tests:
+          - not_null
+          - unique
+      - name: fund_sk
+        description: "Foreign key to dim_fund."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_fund')
+              field: fund_sk
+      - name: security_sk
+        description: "Foreign key to dim_security."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_security')
+              field: security_sk
+      - name: date_sk
+        description: "Foreign key to dim_date."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_sk
+      - name: market_value_thousands
+        description: "Market value in thousands of USD."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 400000000000000
+      - name: market_value_usd
+        description: "Market value in USD (market_value_thousands * 1000)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 400000000000000
+      - name: amount_type
+        description: "SH = shares, PRN = principal amount."
+        tests:
+          - accepted_values:
+              values: ['SH', 'PRN']
